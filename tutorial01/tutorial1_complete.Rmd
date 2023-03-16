@@ -81,13 +81,15 @@ Using the ApplianceShipments.csv file (a series of quarterly shipments (in milli
 - Create a well-formatted time plot of the data.
 - Which of the four components (level, trend, seasonality, noise) seem to be present in this series?
 
-```{r task one, eval = FALSE}
-aps <- #read in the csv
+```{r task one}
+aps <- read.csv("data/ApplianceShipments.csv") #read in the csv
 
-aps.ts <- #convert to ts
+aps.ts <- ts(aps[,-c(1, 3, 4)], start = c(1985, 1), frequency = 4) #convert to ts
 
-#create a plot
+plot(aps.ts, xlab = "", ylab = "USD millions", main = "Quarterly US Appliance Shipments")
 ```
+
+Level, seasonality and noise are present, and possibly a slight upward trend.
 
 ## Trends
 
@@ -108,9 +110,23 @@ The `Sept11Travel.csv` dataset analyses monthly passenger movement data between 
 - Plot one of the time series (Air, Rail or Auto)
 - What trend appears? Try changing the scale of the series, adding trend lines and suppressing seasonality to better visualise the trend pattern.
 
-```{r task two, eval = FALSE}
-sept11 <- read.csv("data/Sept11Travel.csv") #read in csv
-sept11.ts <- #create a ts object
-pre.ts <- #subset data for before Sept 2001
-  
+```{r task two}
+sept11 <- read.csv("data/Sept11Travel.csv")
+sept11.ts <- ts(sept11[,-1], start = c(1990, 1), end = c(2004, 4), frequency = 12)
+pre.ts <- window(sept11.ts, end = c(2001, 8))
+
+plot(pre.ts[,1], ylab = "revenue passenger miles", main = "US Air Travel")
+
+plot(window(pre.ts[,1], start = c(1990,1), end = c(1990,12)), 
+     ylab = "revenue passenger miles", main = "US Air Travel, 1990")
+
+ggseasonplot(pre.ts[,1], polar = TRUE) +
+  ggtitle("US Air Travel, 1990 - 2011") +
+  theme(legend.position="none")
+
+ggsubseriesplot(pre.ts[,1])
+
+air.lm <- tslm(pre.ts[,1] ~ trend)
+plot(pre.ts[,1], ylab = "revenue passenger miles", main = "US Air Travel")
+lines(air.lm$fitted, lwd = 2)
 ```
