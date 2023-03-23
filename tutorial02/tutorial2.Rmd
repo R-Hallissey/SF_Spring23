@@ -141,6 +141,7 @@ plot(train.AAN.pred, ylab = "Ridership")
 ### Task
 
 The `SouvenirSales.csv` dataset contains monthly sales data for a souvenir shop in Queensland, Australia, between 1995 and 2001.
+
 - Partition the data into train and validation periods. The validation period should be the last 12 months of the data.
 - Perform a naive and seasonal naive forecast.
 - Compute the RMSE and MAPE for the naive forecasts.

@@ -529,14 +529,18 @@ plot(train.AAN.pred, ylab = &quot;Ridership&quot;)</code></pre>
 <h3>Task</h3>
 <p>The <code>SouvenirSales.csv</code> dataset contains monthly sales
 data for a souvenir shop in Queensland, Australia, between 1995 and
-2001. - Partition the data into train and validation periods. The
-validation period should be the last 12 months of the data. - Perform a
-naive and seasonal naive forecast. - Compute the RMSE and MAPE for the
-naive forecasts. - Plot a histogram of the errors for <strong>the
-validation period</strong> from the naive forecasts. - Plot a time plot
-for the naive forecasts, with actual sales numbers in the validation
-period. What conclusions can you draw about the behaviour of the
-forecasts?</p>
+2001.</p>
+<ul>
+<li>Partition the data into train and validation periods. The validation
+period should be the last 12 months of the data.</li>
+<li>Perform a naive and seasonal naive forecast.</li>
+<li>Compute the RMSE and MAPE for the naive forecasts.</li>
+<li>Plot a histogram of the errors for <strong>the validation
+period</strong> from the naive forecasts.</li>
+<li>Plot a time plot for the naive forecasts, with actual sales numbers
+in the validation period. What conclusions can you draw about the
+behaviour of the forecasts?</li>
+</ul>
 <pre class="r"><code>svs &lt;- read.csv(&quot;data/SouvenirSales.csv&quot;) #read in file
 svs.ts &lt;- ts(, start = c(), end = c(), frequency = ) #convert to ts
 
