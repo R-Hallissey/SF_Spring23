@@ -369,7 +369,7 @@ relatively simple procedure. The <code>tslm()</code> function in the
 <code>forecast</code> package will accept additional variables in a
 similar manner to the <code>lm()</code> function in base <code>R</code>.
 We will use the <code>BikeSharingDaily.csv</code> dataset to demonstrate
-the procedure. The first code chunk is take from the course reader, and
+the procedure. The first code chunk is taken from the course reader, and
 is for preparing the data.</p>
 <pre class="r"><code># Load and prepare data.
 bike.df &lt;- read.csv(&quot;data/BikeSharingDaily.csv&quot;)
@@ -741,6 +741,19 @@ confusionMatrix(as.factor(ifelse(rainy.mod$fitted &gt; 0.5, 1, 0)),
 <p>As the confusion matrix demonstrates, the model is quite accurate at
 predicting no-rain days (94.7% - the specificity score) and about 20%
 accurate at predicting rarer rainy days (sensitivity).</p>
+</div>
+<div id="a-final-word-on-external-information" class="section level2">
+<h2>A Final Word on External Information…</h2>
+<p>When using external information (i.e. additional predictors) to
+forecast time series data, we always need to think about the real life
+scenario in which the model will be used.</p>
+<p>Take the bike rental case above: it’s clear that there is some
+<em>thing</em> which is leading to a sharp fall in demand that none of
+our models is capturing. What could this omitted variable be?</p>
+<p>Perhaps more importantly, think about the external information we’re
+using. What variable in our model could be problematic for
+<em>forecasting</em> demand? How might we better model this uncertainty
+in our forecast?</p>
 <div id="case-study" class="section level3">
 <h3>Case Study</h3>
 <p>The <code>bicup2006.csv</code> dataset contains historic information
