@@ -144,7 +144,7 @@ The final forecasting technique we will look at concerns binary outcomes. As wit
 
 As with other forecasting methods, lagged predictors (where available) can be useful in forecasting binary outcomes: when the binary outcome is based on a continuous measurement (stock price, blood sugar, rainfall, etc.) it can be more useful to include the lagged predictor of the actual measurement, rather than the binary value.
 
-The below example uses the `MelbourneRainfall.csv` dataset to forecast rainy days (yes/no) using only rainfall amounts. We use the `glm()` function, with which you are already familiar, to model binary outcomes; it is not necessary to convert the data frame to a time series object for use with `glm()`. We do however perform several operations such as lagging and the use of seasonal smoothing. We will also use the `caret` package to create a confusion matrix of forecast outcomes.
+The below example uses the `MelbourneRainfall.csv` dataset to forecast rainy days (yes/no) using only rainfall amounts. We use the `glm()` function, with which you are already familiar, to model binary outcomes; it is not necessary to convert the data frame to a time series object for use with `glm()`. We do however perform several operations such as lagging and the use of seasonal smoothing. We will also use the `caret` package to create a confusion matrix of forecasted outcomes.
 
 ```{r binary outcomes}
 rain <- read.csv("data/MelbourneRainfall.csv")
@@ -188,10 +188,99 @@ Take the bike rental case above: it's clear that there is some *thing* which is 
 
 Perhaps more importantly, think about the external information we're using. What variable in our model could be problematic for *forecasting* demand? How might we better model this uncertainty in our forecast?
 
+The answer is **weather**. We're unsure from our data whether this is being modeled using the *actual* weather conditions, or the forecast conditions. Ideally, we would want our model to be trained under the same conditions as the real model will be operating. That means, for example, using the day-ahead forecast if we intend to forecast demand 24 hours ahead; or perhaps the five-day forecast, if we intend to forecast demand for the full working week.
+
 ### Case Study
 
-The `bicup2006.csv` dataset contains historic information on passengers arriving at a public bus terminal in five-minute periods for a three-week window. Your goal is to create a model with the best predictive metrics, using a two-week training period and a one week validation period.
+The `bicup2006.csv` dataset contains historic information on passengers arriving at a public bus terminal in fifteen-minute periods for a three-week and three day window. Your goal is to create a model with the best predictive metrics, using a two-week training period and a one week validation period. (The final three days are a hold-out).
 
-```{r case study, eval = FALSE}
+```{r case study}
 bicup <- read.csv("data/bicup2006.csv")
+```
+
+```{r data exploration}
+head(bicup)
+
+bicup.ts <- ts(bicup$DEMAND, frequency = 63) # create a ts based on daily observations
+plot(bicup.ts)
+```
+
+Observing the data, we see our time series begins on what looks like a Tuesday. Moreover, our series is not evenly spaced: data begin at 6:30AM and end at 10PM.
+
+The seasonality pattern looks fairly consistent, with limited trend. We could try dynamic harmonic regression here.
+
+```{r dynamic harmonic regression approach}
+bicup.msts <- msts(bicup$DEMAND[1:1323], seasonal.periods = c(63, 441))
+train.msts <- msts(bicup$DEMAND[1:882], seasonal.periods = c(63, 441))
+valid.msts <- msts(bicup$DEMAND[883:1323], seasonal.periods = c(63, 441))
+
+arima.mod <- auto.arima(train.msts, 
+                        xreg = fourier(train.msts, K = c(10, 20)))
+
+arima.pred <- forecast(arima.mod, xreg = fourier(valid.msts, K = c(10, 20)))
+accuracy(arima.pred, bicup.msts)
+checkresiduals(arima.pred)
+
+plot(arima.pred)
+lines(bicup.msts)
+```
+
+Despite the unusual shape of the data, the dynamic harmonic regression does quite well at capturing both the morning and evening rush hour peaks, as well as the flatter demand at the weekends. Experimenting with different values of *K* could produce even better results, but with additional computational costs. 
+
+A second approach is to apply a linear model, using trend and seasonality as predictors.
+
+```{r trend and seasonality}
+lmts.mod <- tslm(train.msts ~ trend + season, lambda = 0.175)
+
+lmts.pred <- forecast(lmts.mod, h = 441)
+accuracy(lmts.pred, bicup.msts)
+checkresiduals(lmts.pred)
+
+plot(lmts.pred)
+lines(bicup.msts)
+```
+
+This model appears to perform equally well and is computationally less intensive. We do however have a lot of coefficients (442): one for each 15 minute period in the week. Note that we have supplied an `msts` object as the target: this allows us to include multiple seasonality (i.e. *daily* and *weekly* patterns). A simple `ts` object would not enable this, although if we set frequency to 442 the output would be the same. This model may not be ideal, as one could argue it is overfitted to the data, and is similar to a seasonal naive approach.
+
+```{r linear trend season model}
+summary(lmts.mod)
+
+accuracy(snaive(train.msts, h = 441), bicup.msts)
+```
+
+A third approach is to include a linear model with dummy terms for the days, and seasonality limited to a daily term.
+
+```{r linear model}
+bicup$DT <- paste(bicup$DATE, bicup$TIME)
+bicup$DT <- as.POSIXct(bicup$DT, format = "%d-%b-%y %H:%M")
+
+bicup$WDAY <- wday(bicup$DT, label = TRUE)
+WDAY.dummies <- model.matrix(~ 0 + WDAY, data = bicup)
+colnames(WDAY.dummies) <- gsub("WDAY", "", colnames(WDAY.dummies))
+
+train.x <- WDAY.dummies[1:882, -1]
+train.ts <- ts(bicup$DEMAND[1:882], frequency = 63)
+
+test.x <- WDAY.dummies[883:1323, -1]
+test.ts <- ts(bicup$DEMAND[883:1323], frequency = 63)
+
+(formula <- as.formula(paste("train.ts", paste(c("trend", "season", colnames(train.x)), collapse = "+"), sep = "~")))
+
+lm.mod <- tslm(formula,
+               data = as.data.frame(train.x))
+
+summary(lm.mod)
+```
+
+This model certainly has fewer coefficients, and so is a little easier to interpret; there is very little trend however, and so the benefits of a time series regression are probably limited here. It also does a poor job of modelling weekend demand.
+
+```{r lm results}
+lm.pred <- forecast(lm.mod, newdata = as.data.frame(test.x))
+
+bicup.ts <- ts(bicup$DEMAND[1:1323], frequency = 63)
+accuracy(lm.pred, bicup.ts)
+checkresiduals(lm.pred)
+
+plot(lm.pred)
+lines(bicup.ts)
 ```
